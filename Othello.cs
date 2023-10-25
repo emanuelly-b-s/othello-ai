@@ -1,25 +1,17 @@
 public class Othello
 {
-
-    int lastBoard = 0;
-    int lastPosition = 0;
-
     byte whiteCount;
+    byte blackCount;
     bool whitePlays;
     public byte WhitePoints;
     public byte BlackPoints;
     private ulong whiteInfo;
     private ulong blackInfo;
+    private ulong u = 1;
 
-
-    public Othello(bool whitePlays, byte BlackPoints, byte WhitePoints, byte whiteCount, byte blackCount, ulong whiteInfo, ulong blackInfo)
+    public Othello(bool whitePlays)
     {
-        this.whiteCount = whiteCount;
         this.whitePlays = whitePlays;
-        this.WhitePoints = WhitePoints;
-        this.BlackPoints = BlackPoints;
-        this.whiteInfo = whiteInfo;
-        this.blackInfo = blackInfo;
     }
 
 
@@ -34,18 +26,7 @@ public class Othello
     /// </summary>
     public void Play(int board, int posit)
     {
-        lastBoard = board;
-        lastPosition = posit;
-
-        var tableIndex = 9 * board;
-        var sumsIndex = 8 * board;
-        data[tableIndex + posit] = true;
-        sums[sumsIndex + (posit / 3)]++;
-        sums[sumsIndex + (posit % 3) + 3]++;
-        if (posit % 4 == 0)
-            sums[sumsIndex + 6]++;
-        if (posit % 2 == 0 && posit > 0 && posit < 8)
-            sums[sumsIndex + 7]++;
+        // todo
     }
 
     /// <summary>
@@ -53,13 +34,30 @@ public class Othello
     /// </summary>
     public bool CanPlay(ulong pos)
     {
-        var whitePlay = whiteInfo | pos;
-        var blackPlay = blackInfo | pos;
+        var whiteMove = whiteInfo | pos;
+        var blackMove = blackInfo | pos;
 
-        if (whitePlay == whiteInfo || blackPlay == blackInfo)
+        if (whiteMove == whiteInfo || blackMove == blackInfo)
             return false;
 
-        
+        int[] rowOffsets = { -1, 1, 0, 0, -1, -1, 1, 1 }
+        int[] colOffsets = { 0, 0, -1, 1, -1, 1, -1, 1 };
+        var enemyInfo = this.whitePlays ? blackInfo : whiteInfo;
+
+        for (int i = 0; i < 8; i++)
+        {
+            if (hasAdjacentEnemy(enemyInfo, pos, rowOffsets[i], colOffsets[i]))
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool hasAdjacentEnemy(ulong playerInfo, ulong pos, int rowOffset, int colOffset)
+    {
+        ulong adjacentPos = pos << (8 * rowOffset) << colOffset;
+
+        return (adjacentPos & playerInfo) != 0;
     }
 
     /// <summary>
@@ -79,18 +77,15 @@ public class Othello
     /// </summary>
     public Othello Clone()
     {
-        Othello copy = new Othello(boards);
-        Array.Copy(
-            this.data,
-            copy.data,
-            this.data.Length
-        );
-        Array.Copy(
-            this.sums,
-            copy.sums,
-            this.sums.Length
-        );
-        return copy;
+        Othello clone = new Othello(whitePlays);
+        clone.blackCount = this.blackCount;
+        clone.blackInfo = this.blackInfo;
+        clone.BlackPoints = this.BlackPoints;
+        clone.whiteCount = this.whiteCount;
+        clone.whiteInfo = this.whiteInfo;
+        clone.WhitePoints = this.WhitePoints;
+
+        return clone;
     }
 
     /// <summary>
@@ -98,20 +93,13 @@ public class Othello
     /// </summary>
     public IEnumerable<Othello> Next()
     {
-        var clone = this.Clone();
-        for (int b = 0; b < boards; b++)
+        for (int i = 0; i < 64; i++)
         {
-            if (!CanPlay(b))
-                continue;
-
-            for (int p = 0; p < 9; p++)
+            if (CanPlay(u << i))
             {
-                if (data[b * 9 + p])
-                    continue;
-
-                clone.Play(b, p);
+                var clone = this.Clone();
+                clone.Play( u << i);
                 yield return clone;
-                clone = this.Clone();
             }
         }
     }
